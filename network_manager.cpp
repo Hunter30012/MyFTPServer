@@ -3,7 +3,14 @@
 NetworkManager::NetworkManager(QObject *parent)
     : QObject{parent}
 {
-    connect(&m_commandThread, &TcpServerThread::startActiveDataThread, &m_activeDataThread, &TcpClientThread::startThread);
+    // connect to ActiveData Thread
+    connect(&m_commandThread, &CommandThread::startActiveDataThreadSignal, &m_activeDataThread, &ActiveDataThread::startThread, Qt::QueuedConnection);
+    connect(&m_commandThread, &CommandThread::stopActiveDataSignal, &m_activeDataThread, &ActiveDataThread::stopConnection, Qt::QueuedConnection);
+    connect(&m_commandThread, &CommandThread::restartActiveDataSignal, &m_activeDataThread, &ActiveDataThread::restartConnection, Qt::QueuedConnection);
+    //connect to PassiveDataThread
+    connect(&m_commandThread, &CommandThread::startPassiveDataThreadSignal, &m_passiveDataThread, &PassiveDataThread::startThread, Qt::QueuedConnection);
+    connect(&m_commandThread, &CommandThread::stopPassiveDataSignal, &m_passiveDataThread, &PassiveDataThread::stopListening, Qt::QueuedConnection);
+    connect(&m_commandThread, &CommandThread::restartPassiveDataThreadSignal, &m_passiveDataThread, &PassiveDataThread::restartListening, Qt::QueuedConnection);
 }
 
 bool NetworkManager::isValidPort(const QString &port)
@@ -22,7 +29,6 @@ void NetworkManager::startServer(int port)
 {
     m_commandThread.startThread(port);
 }
-
 void NetworkManager::stopServer()
 {
     emit stopServerSignal();

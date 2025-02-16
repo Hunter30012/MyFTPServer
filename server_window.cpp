@@ -28,7 +28,11 @@ void ServerWindow::startServer()
     int port = portText.toInt(&ret);
     qDebug() << "Port Number: " + QString::number(port);
     if(ret) {
-        emit startServerSignal(port);
+        if(isPortAvailable(port)) {
+            emit startServerSignal(port);
+        } else {
+            writeTextToOutput("Please enter the other port!", Qt::red);
+        }
     } else {
         writeTextToOutput("Please enter the valid port!", Qt::red);
     }
@@ -44,4 +48,19 @@ void ServerWindow::disableStop()
 {
     ui->stopButton->setDisabled(true);
     ui->startButton->setDisabled(false);
+}
+
+void ServerWindow::clearOutput()
+{
+    ui->textBrowser->clear();
+}
+
+bool ServerWindow::isPortAvailable(int port)
+{
+    QTcpServer server;
+    if (server.listen(QHostAddress::Any, port)) {
+        server.close();
+        return true;
+    }
+    return false;
 }

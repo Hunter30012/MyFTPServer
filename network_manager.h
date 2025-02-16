@@ -2,8 +2,9 @@
 #define NETWORK_MANAGER_H
 
 #include <QObject>
-#include "tcpserver_thread.h"
-#include "tcpclient_thread.h"
+#include "command_thread.h"
+#include "active_data_thread.h"
+#include "passive_data_thread.h"
 
 class NetworkManager : public QObject
 {
@@ -18,10 +19,10 @@ signals:
     void stopServerSignal();
 
 private:
-    TcpServerThread m_commandThread;
+    CommandThread m_commandThread;
 
-    TcpServerThread m_passiveDataThread;
-    TcpClientThread m_activeDataThread;
+    PassiveDataThread m_passiveDataThread;
+    ActiveDataThread m_activeDataThread;
 };
 
 #endif // NETWORK_MANAGER_H

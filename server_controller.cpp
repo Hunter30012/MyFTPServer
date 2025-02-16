@@ -20,6 +20,7 @@ int ServerController::init()
 
 void ServerController::connectWindowSignalSlots(QList<bool> &connectionResults)
 {
+    connectionResults.append(connect(m_window.ui->clearButton, &QPushButton::clicked, &m_window, &ServerWindow::clearOutput));
     connectionResults.append(connect(m_window.ui->startButton, &QPushButton::clicked, &m_window, &ServerWindow::startServer));
     connectionResults.append(connect(&m_window, &ServerWindow::startServerSignal, &m_model, &ServerModel::startServer));
     connectionResults.append(connect(m_window.ui->stopButton, &QPushButton::clicked, &m_model, &ServerModel::stopServer));
@@ -27,15 +28,14 @@ void ServerController::connectWindowSignalSlots(QList<bool> &connectionResults)
 
 void ServerController::connectModelSignalSlots(QList<bool> &connectionResults)
 {
-
     /**
      * Network Manager
      */
-    connectionResults.append(connect(&m_model.m_networkManager, &NetworkManager::stopServerSignal, &m_model.m_networkManager.m_commandThread, &TcpServerThread::quit));
+    connectionResults.append(connect(&m_model.m_networkManager, &NetworkManager::stopServerSignal, &m_model.m_networkManager.m_commandThread, &CommandThread::stopListening));
     // command - TCPServer
-    connectionResults.append(connect(&m_model.m_networkManager.m_commandThread, &TcpServerThread::writeTextSignal, &m_window, &ServerWindow::writeTextToOutput));
-    connectionResults.append(connect(&m_model.m_networkManager.m_commandThread, &TcpServerThread::enableStopSignal, &m_window, &ServerWindow::enableStop));
-    connectionResults.append(connect(&m_model.m_networkManager.m_commandThread, &TcpServerThread::disableStopSignal, &m_window, &ServerWindow::disableStop));
+    connectionResults.append(connect(&m_model.m_networkManager.m_commandThread, &CommandThread::writeTextSignal, &m_window, &ServerWindow::writeTextToOutput));
+    connectionResults.append(connect(&m_model.m_networkManager.m_commandThread, &CommandThread::enableStopSignal, &m_window, &ServerWindow::enableStop));
+    connectionResults.append(connect(&m_model.m_networkManager.m_commandThread, &CommandThread::disableStopSignal, &m_window, &ServerWindow::disableStop));
     // active - TCPSocket
-    connectionResults.append(connect(&m_model.m_networkManager.m_activeDataThread, &TcpClientThread::writeTextSignal, &m_window, &ServerWindow::writeTextToOutput));
+    connectionResults.append(connect(&m_model.m_networkManager.m_activeDataThread, &ActiveDataThread::writeTextSignal, &m_window, &ServerWindow::writeTextToOutput));
 }

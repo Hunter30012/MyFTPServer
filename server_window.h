@@ -3,6 +3,7 @@
 
 #include <QWidget>
 #include <QDateTime>
+#include <QTcpServer>
 #include "./ui_serverwindow.h"
 
 class ServerWindow : public QWidget
@@ -21,6 +22,9 @@ public slots:
     void startServer();
     void enableStop();
     void disableStop();
+    void clearOutput();
+
+    bool isPortAvailable(int port);
 
 private:
     Ui::ServerWindow *ui;

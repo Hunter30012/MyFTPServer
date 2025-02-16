@@ -26,8 +26,9 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         server_controller.h server_controller.cpp
         server_model.h server_model.cpp
         network_manager.h network_manager.cpp
-        tcpserver_thread.h tcpserver_thread.cpp
-        tcpclient_thread.h tcpclient_thread.cpp
+        command_thread.h command_thread.cpp
+        active_data_thread.h active_data_thread.cpp
+        passive_data_thread.h passive_data_thread.cpp
     )
 # Define target properties for Android with Qt 6 as:
 #    set_property(TARGET MyFTPServer APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR

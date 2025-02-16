@@ -1,5 +1,5 @@
-#ifndef TCPSERVER_THREAD_H
-#define TCPSERVER_THREAD_H
+#ifndef COMMAND_THREAD_H
+#define COMMAND_THREAD_H
 
 #include <QObject>
 #include <QTcpServer>
@@ -8,29 +8,37 @@
 #include <QColor>
 #include <QNetworkInterface>
 
-class TcpServerThread : public QObject
+class CommandThread : public QObject
 {
     Q_OBJECT
     friend class ServerController;
 public:
-    explicit TcpServerThread(QObject *parent = nullptr);
-
+    explicit CommandThread(QObject *parent = nullptr);
+    ~CommandThread();
 signals:
     // info
     void writeTextSignal(QString text, QColor color = {});
+    // acticve mode
+    void startActiveDataThreadSignal();
+    void restartActiveDataSignal(const QHostAddress& address, int port);
+    void stopActiveDataSignal();
 
-    void startActiveDataThread(const QString& address, int port);
+    // passive mode
+    void startPassiveDataThreadSignal();
+    void restartPassiveDataThreadSignal(int port);
+    void stopPassiveDataSignal();
 
     void sendDataSignal(const QByteArray& data);
+    // Control Button
     void enableStopSignal();
     void disableStopSignal();
 
 public slots:
     void startThread(int port); // connect to Button
-    void quit();
+    void stopListening();          // connect to Button
 
 private slots:
-    void run();
+    void onStarted();
 
     void onNewConnection();
     void onReadyRead();
@@ -39,11 +47,13 @@ private slots:
     void sendData(const QByteArray& data);
 
 private:
+    bool isActiveMode;
     int m_port;
+    QHostAddress m_address;
 
     QThread m_thread;
     QTcpServer* m_server;
     QTcpSocket* m_socket;
 };
 
-#endif // TCPSERVER_THREAD_H
+#endif // COMMAND_THREAD_H
