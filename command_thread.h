@@ -7,6 +7,7 @@
 #include <QTcpSocket>
 #include <QColor>
 #include <QNetworkInterface>
+#include "ftp_manager.h"
 
 class CommandThread : public QObject
 {
@@ -20,8 +21,9 @@ signals:
     void writeTextSignal(QString text, QColor color = {});
     // acticve mode
     void startActiveDataThreadSignal();
-    void restartActiveDataSignal(const QHostAddress& address, int port);
+    void restartActiveDataSignal(const QHostAddress& address, int port, const QString& curDir);
     void stopActiveDataSignal();
+    void connectedActiveSignal(const QString& dir);
 
     // passive mode
     void startPassiveDataThreadSignal();
@@ -34,7 +36,7 @@ signals:
     void disableStopSignal();
 
 public slots:
-    void startThread(int port); // connect to Button
+    void startThread(int port, const QString& dir); // connect to Button
     void stopListening();          // connect to Button
 
 private slots:
@@ -45,9 +47,11 @@ private slots:
     void disconnected();
 
     void sendData(const QByteArray& data);
+    void parseRequest(const QByteArray& requestData);
 
 private:
-    bool isActiveMode;
+    QString m_curDir;
+    bool m_isActiveMode;
     int m_port;
     QHostAddress m_address;
 

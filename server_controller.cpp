@@ -38,4 +38,6 @@ void ServerController::connectModelSignalSlots(QList<bool> &connectionResults)
     connectionResults.append(connect(&m_model.m_networkManager.m_commandThread, &CommandThread::disableStopSignal, &m_window, &ServerWindow::disableStop));
     // active - TCPSocket
     connectionResults.append(connect(&m_model.m_networkManager.m_activeDataThread, &ActiveDataThread::writeTextSignal, &m_window, &ServerWindow::writeTextToOutput));
+
+    connectionResults.append(connect(&m_model.m_networkManager.m_passiveDataThread, &PassiveDataThread::writeTextSignal, &m_window, &ServerWindow::writeTextToOutput));
 }

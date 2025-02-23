@@ -15,12 +15,13 @@ signals:
     void writeTextSignal(QString text, QColor color = {});
 
 public slots:
-    void startServer(int port);
+    void startServer(int port, const QString& dir);
     void stopServer();
 
 private:
-    NetworkManager m_networkManager;
+    QString m_curDir;
 
+    NetworkManager m_networkManager;
 };
 
 #endif // SERVER_MODEL_H

@@ -24,12 +24,17 @@ void ServerWindow::writeTextToOutput(QString text, QColor color)
 void ServerWindow::startServer()
 {
     bool ret;
+    QString curDir = ui->serverDirLineEdit->text();
+    if(curDir.isEmpty()) {
+        writeTextToOutput("Please enter the server directory!", Qt::red);
+        return;
+    }
     QString portText = ui->portLineEdit->text();
     int port = portText.toInt(&ret);
-    qDebug() << "Port Number: " + QString::number(port);
     if(ret) {
+        qDebug() << "Port Number: " + QString::number(port);
         if(isPortAvailable(port)) {
-            emit startServerSignal(port);
+            emit startServerSignal(port, curDir);
         } else {
             writeTextToOutput("Please enter the other port!", Qt::red);
         }

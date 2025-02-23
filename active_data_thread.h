@@ -5,6 +5,7 @@
 #include <QTcpSocket>
 #include <QThread>
 #include <QColor>
+#include "ftp_manager.h"
 
 class ActiveDataThread : public QObject
 {
@@ -18,18 +19,20 @@ signals:
     void writeTextSignal(QString text, QColor color = {});
     void sendDataSignal(const QByteArray& data);
 
-    void disconnected();
-    void dataReceived(const QByteArray &data);
-    void errorOccurred(const QString &errorMsg);
+    void disconnectedSignal();
+    void dataReceivedSignal(const QByteArray &data);
 public slots:
     void startThread();
-    void restartConnection(const QHostAddress &serverIp, int port);
+    void restartConnection(const QHostAddress &serverIp, int port, const QString& curDir);
     void stopConnection();
 
     void sendData(const QByteArray &data);
 
+    // Handle command
+    void onConnectedActive(const QString& dir);
+
 private slots:
-    void connected();
+    void onConnected();
     void onStarted();
     void onReadyRead();
     void onError(QAbstractSocket::SocketError socketError);
@@ -37,6 +40,7 @@ private slots:
 private:
     QHostAddress m_serverIp;
     int m_serverPort;
+    QString m_curDir;
 
     QThread m_thread;
     QTcpSocket *m_socket;

@@ -1,7 +1,7 @@
 #include "active_data_thread.h"
 
 ActiveDataThread::ActiveDataThread(QObject *parent)
-    : QObject{parent}, m_socket{nullptr}, m_serverIp{""}, m_serverPort{0}
+    : QObject{parent}, m_socket{nullptr}
 {
     connect(this, &ActiveDataThread::sendDataSignal, this, &ActiveDataThread::sendData);
 }
@@ -31,31 +31,30 @@ void ActiveDataThread::startThread()
     }
 }
 
-void ActiveDataThread::restartConnection(const QHostAddress &serverIp, int port)
+void ActiveDataThread::onStarted()
 {
+    QThread::currentThread()->setObjectName("ActiveData Thread");
+    qDebug() << "After started: " << QThread::currentThread();
+}
+
+void ActiveDataThread::restartConnection(const QHostAddress &serverIp, int port, const QString& curDir)
+{
+    m_curDir = curDir;
     m_serverIp = serverIp;
     m_serverPort = port;
 
     m_socket = new QTcpSocket();
     qDebug() << "restartConnection: " << QThread::currentThread();
     qInfo() << "Trying to connect to " << m_serverIp.toString() << ":" << m_serverPort;
-    m_socket->connectToHost(m_serverIp, m_serverPort);
-
-    if (!m_socket->waitForConnected(5000)) {
-        qWarning() << "Connection failed!";
-        emit errorOccurred("Connection Timeout!");
-
-    }
-    connect(m_socket, &QTcpSocket::connected, this, &ActiveDataThread::connected);
+    connect(m_socket, &QTcpSocket::connected, this, &ActiveDataThread::onConnected);
     connect(m_socket, &QTcpSocket::readyRead, this, &ActiveDataThread::onReadyRead);
-    connect(m_socket, QOverload<QAbstractSocket::SocketError>::of(&QTcpSocket::errorOccurred),
-            this, &ActiveDataThread::onError);
-}
-
-void ActiveDataThread::onStarted()
-{
-    QThread::currentThread()->setObjectName("ActiveData Thread");
-    qDebug() << "After started: " << QThread::currentThread();
+    connect(m_socket, &QTcpSocket::errorOccurred, this, &ActiveDataThread::onError);
+    m_socket->connectToHost(m_serverIp, m_serverPort);
+    if (!m_socket->waitForConnected(5000)) {
+        qWarning() << "Start active mode failed!";
+        return;
+    }
+    emit writeTextSignal("Server is running Active Mode", Qt::darkBlue);
 }
 
 void ActiveDataThread::stopConnection()
@@ -75,31 +74,44 @@ void ActiveDataThread::stopConnection()
 
 void ActiveDataThread::sendData(const QByteArray &data)
 {
+    qDebug() << "Send data in ActiveDataThread";
     if (m_socket && m_socket->state() == QAbstractSocket::ConnectedState) {
+        emit writeTextSignal("Send data to Server", Qt::darkBlue);
         m_socket->write(data);
     } else {
-        qWarning() << "Cannot send data, no active connection!";
+        emit writeTextSignal("Cannot send data, no active connection!", Qt::red);
     }
 }
 
 void ActiveDataThread::onReadyRead()
 {
     qDebug() << "onReadyRead: " << QThread::currentThread();
+    emit writeTextSignal("Recieved Data from Client", Qt::darkBlue);
     QByteArray data = m_socket->readAll();
-    qDebug() << "Received from Server: " << data;
+    // qDebug() << "Received from Server: " << data;
     // handle Data
-    emit dataReceived(data);
+    emit dataReceivedSignal(data);
 }
 
 void ActiveDataThread::onError(QAbstractSocket::SocketError socketError)
 {
-    Q_UNUSED(socketError);
-    qWarning() << "Socket Error: " << m_socket->errorString();
-    emit writeTextSignal(m_socket->errorString());
+    qDebug() << "Error:" << socketError << " " << m_socket->errorString();
+    emit writeTextSignal(m_socket->errorString(), Qt::red);
 }
 
-void ActiveDataThread::connected()
+void ActiveDataThread::onConnected()
 {
     qDebug() << QThread::currentThread();
     qDebug() << "Connected from Data thread";
+    emit writeTextSignal("Established connection!", Qt::darkBlue);
+    onConnectedActive(m_curDir);
+}
+
+
+// Hanlde Command
+void ActiveDataThread::onConnectedActive(const QString& dir)
+{
+    QJsonArray serverResponse = FTPManager::createServerResponse(FTPManager::ResponseType::ActiveConnected , dir);
+    qDebug() << "Send test data!";
+    sendData(DataConverter::JsonArrayToByteArray(serverResponse));
 }

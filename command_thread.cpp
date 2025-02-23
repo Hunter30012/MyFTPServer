@@ -36,8 +36,9 @@ CommandThread::~CommandThread()
     }
 }
 
-void CommandThread::startThread(int port)
+void CommandThread::startThread(int port, const QString& dir)
 {
+    m_curDir = dir;
     m_port = port;
     qDebug() << "On startThread";
 
@@ -70,9 +71,9 @@ void CommandThread::onStarted()
     } else {
         emit writeTextSignal("Server failed to start.", Qt::darkRed);
     }
-    // if Active mode
+    // Active mode
     emit startActiveDataThreadSignal();
-    // if Passive mode
+    // Passive mode
     emit startPassiveDataThreadSignal();
 }
 
@@ -92,15 +93,16 @@ void CommandThread::onNewConnection()
     qInfo() << "New client connected!";
 
     int clientPort = m_socket->peerPort();
-    emit writeTextSignal("Connected connected from IP: " + m_socket->peerAddress().toString() +  ":" + QString::number(clientPort), Qt::darkBlue);
+    emit writeTextSignal("Connected from IP: " + m_socket->peerAddress().toString() +  ":" + QString::number(clientPort), Qt::darkBlue);
     emit enableStopSignal();
 
     // test  - addr va port cua Client de ket noi toi
+    // QThread::sleep(2);
     // QHostAddress addr_test("169.254.198.94");
     // emit restartActiveDataSignal(addr_test, 5051);
 
     // passive
-    emit restartPassiveDataThreadSignal(5050);
+    // emit restartPassiveDataThreadSignal(5050);
 }
 
 void CommandThread::sendData(const QByteArray &data)
@@ -115,9 +117,92 @@ void CommandThread::sendData(const QByteArray &data)
 void CommandThread::onReadyRead()
 {
     if (m_socket) {
+        emit writeTextSignal("Recieve command from Client", Qt::darkBlue);
+        qDebug() << "Server receive data form client" << QThread::currentThread();
         QByteArray data = m_socket->readAll();
-        qDebug() << "Received: " << data;
-        sendData("Server Response: " + data);  // Response to Client
+
+
+        // QString msg = QString::fromUtf8(data);
+        // qDebug() << "Received: " << msg;
+
+        // Test Connected Active
+        // if (msg == "Active") {
+        //     emit writeTextSignal("Active mode command", Qt::darkBlue);
+        //     emit connectedActiveSignal(m_curDir);
+        // }
+        if(FTPManager::checkIfDataIsJson(data)) {
+            parseRequest(data);
+        } else {
+            emit writeTextSignal("Request from Clinet - Invalid Json format!", Qt::red);
+        }
+    }
+}
+
+void CommandThread::parseRequest(const QByteArray &requestData)
+{
+    QJsonDocument jsonDoc = QJsonDocument::fromJson(requestData);
+    QJsonObject request = jsonDoc.object();
+
+    if (!request.contains("request_type")) {
+        qDebug() << "Invalid request: Missing request_type!";
+        return;
+    }
+
+    qDebug() << "Received JSON:" << QJsonDocument(request).toJson(QJsonDocument::Compact);
+
+    int requestType = request["request_type"].toInt();
+    qDebug() << "Received request type:" << requestType;
+
+    switch (requestType) {
+    case 0: // ActiveConnect
+        if (request.contains("port_data_thread" ) && request.contains("address_data_thread")) {
+            int portDataThread = request["port_data_thread"].toString().toInt();
+            QHostAddress addressDataThread(request["address_data_thread"].toString());
+            emit restartActiveDataSignal(addressDataThread, portDataThread, m_curDir);
+        }
+        break;
+    case 1: // PassiveConnect
+
+        qDebug() << "PassiveConnect request received.";
+        break;
+    case 2: // ChangeDir
+        if (request.contains("requestPath")) {
+            QString requestPath = request["requestPath"].toString();
+            qDebug() << "ChangeDir - Path:" << requestPath;
+        }
+        break;
+    case 3: // Delete
+        if (request.contains("fileToDelete")) {
+            QString fileToDelete = request["fileToDelete"].toString();
+            qDebug() << "Delete - File:" << fileToDelete;
+        }
+        break;
+    case 4: // DownloadFile
+        if (request.contains("localPath") && request.contains("filePathServer") && request.contains("fileNameServer")) {
+            QString localPath = request["localPath"].toString();
+            QString filePathServer = request["filePathServer"].toString();
+            QString fileNameServer = request["fileNameServer"].toString();
+            qDebug() << "DownloadFile - LocalPath:" << localPath
+                     << ", ServerPath:" << filePathServer
+                     << ", FileName:" << fileNameServer;
+        }
+        break;
+    case 5: // UploadFile
+        if (request.contains("localDirPath") && request.contains("fileNameLocal") &&
+            request.contains("fileSizeLocal") && request.contains("filePathLocal")) {
+            QString localDirPath = request["localDirPath"].toString();
+            QString fileNameLocal = request["fileNameLocal"].toString();
+            QString fileSizeLocal = request["fileSizeLocal"].toString();
+            QString filePathLocal = request["filePathLocal"].toString();
+            qDebug() << "UploadFile - DirPath:" << localDirPath
+                     << ", FileName:" << fileNameLocal
+                     << ", Size:" << fileSizeLocal
+                     << ", FilePath:" << filePathLocal;
+        }
+        break;
+    default:
+        qWarning() << "Unknown request type!";
+        break;
     }
 }
 

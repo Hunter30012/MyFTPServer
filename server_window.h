@@ -14,8 +14,7 @@ public:
     ServerWindow(QWidget *parent = nullptr);
     ~ServerWindow();
 signals:
-
-    void startServerSignal(int port);
+    void startServerSignal(int port, const QString& dir);
 
 public slots:
     void writeTextToOutput(QString text, QColor color);

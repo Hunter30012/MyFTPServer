@@ -13,11 +13,13 @@ class NetworkManager : public QObject
 public:
     explicit NetworkManager(QObject *parent = nullptr);
     static bool isValidPort(const QString& port);
-    void startServer(int port);
-    void stopServer();
+
 signals:
     void stopServerSignal();
 
+public slots:
+    void startServer(int port, const QString& dir);
+    void stopServer();
 private:
     CommandThread m_commandThread;
 

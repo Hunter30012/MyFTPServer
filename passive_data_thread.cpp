@@ -100,8 +100,8 @@ void PassiveDataThread::onReadyRead()
 {
     if (m_socket) {
         QByteArray data = m_socket->readAll();
-        qDebug() << "Passive Data received: " << data;
-        sendData("Passive Data response: " + data);  // Response to Client
+        // qDebug() << "Passive Data received: " << data;
+        // sendData("Passive Data response: " + data);  // Response to Client
     }
 }
 
