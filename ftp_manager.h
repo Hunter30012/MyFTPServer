@@ -32,20 +32,22 @@ public:
         ActiveConnected = 0,
         PassiveConnected,
         ChangedDir,
-        Delete,
+        Deleted,
+        UnDeleted,
         DownloadedFile,
+        DownloadingFile,
         UploadedFile,
+        UploadingFile,
     };
 
     static QJsonArray createServerResponse(ResponseType responseStatus, const QString& dir, quint64 bytesWritten = {});
     static bool checkFileExists(const QString& filePath, const QString& fileName);
     static QString changeFileName(const QString& fileName, const QString& filePath);
     static bool checkIfDataIsJson(const QByteArray& data);
-    static void parseRequest(const QByteArray& requestData);
 
     static QJsonArray createUploadProgressResponse(ResponseType responseStatus, const QString& path, quint64 bytesWritten);
     static bool checkIfBaseDir(const QString& directory, const QString& homeDirectory);
-    static void deleteFiles(const QJsonArray& filesToDelete);
+    static bool deleteFiles(const QStringList& filesToDelete);
     static bool renameFile(const QString& filePath, const QString& oldFileName, QString& newFileName);
     static bool createFolder(const QString& newFolderName);
 

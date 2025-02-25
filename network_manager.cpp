@@ -7,13 +7,13 @@ NetworkManager::NetworkManager(QObject *parent)
     connect(&m_commandThread, &CommandThread::startActiveDataThreadSignal, &m_activeDataThread, &ActiveDataThread::startThread, Qt::QueuedConnection);
     connect(&m_commandThread, &CommandThread::stopActiveDataSignal, &m_activeDataThread, &ActiveDataThread::stopConnection, Qt::QueuedConnection);
     connect(&m_commandThread, &CommandThread::restartActiveDataSignal, &m_activeDataThread, &ActiveDataThread::restartConnection, Qt::QueuedConnection);
-
-    connect(&m_commandThread, &CommandThread::connectedActiveSignal, &m_activeDataThread, &ActiveDataThread::onConnectedActive, Qt::QueuedConnection);
+    connect(&m_commandThread, &CommandThread::sendActiveDataSignal, &m_activeDataThread, &ActiveDataThread::sendData, Qt::QueuedConnection);
 
     //connect to PassiveDataThread
     connect(&m_commandThread, &CommandThread::startPassiveDataThreadSignal, &m_passiveDataThread, &PassiveDataThread::startThread, Qt::QueuedConnection);
     connect(&m_commandThread, &CommandThread::stopPassiveDataSignal, &m_passiveDataThread, &PassiveDataThread::stopListening, Qt::QueuedConnection);
     connect(&m_commandThread, &CommandThread::restartPassiveDataThreadSignal, &m_passiveDataThread, &PassiveDataThread::restartListening, Qt::QueuedConnection);
+    connect(&m_commandThread, &CommandThread::sendPassiveDataSignal, &m_passiveDataThread, &PassiveDataThread::sendData, Qt::QueuedConnection);
 }
 
 bool NetworkManager::isValidPort(const QString &port)

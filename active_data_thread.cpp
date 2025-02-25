@@ -78,6 +78,7 @@ void ActiveDataThread::sendData(const QByteArray &data)
     if (m_socket && m_socket->state() == QAbstractSocket::ConnectedState) {
         emit writeTextSignal("Send data to Server", Qt::darkBlue);
         m_socket->write(data);
+        m_socket->flush();
     } else {
         emit writeTextSignal("Cannot send data, no active connection!", Qt::red);
     }
@@ -88,8 +89,8 @@ void ActiveDataThread::onReadyRead()
     qDebug() << "onReadyRead: " << QThread::currentThread();
     emit writeTextSignal("Recieved Data from Client", Qt::darkBlue);
     QByteArray data = m_socket->readAll();
-    // qDebug() << "Received from Server: " << data;
-    // handle Data
+
+    // need to push Queue
     emit dataReceivedSignal(data);
 }
 
@@ -104,14 +105,7 @@ void ActiveDataThread::onConnected()
     qDebug() << QThread::currentThread();
     qDebug() << "Connected from Data thread";
     emit writeTextSignal("Established connection!", Qt::darkBlue);
-    onConnectedActive(m_curDir);
-}
-
-
-// Hanlde Command
-void ActiveDataThread::onConnectedActive(const QString& dir)
-{
-    QJsonArray serverResponse = FTPManager::createServerResponse(FTPManager::ResponseType::ActiveConnected , dir);
+    QJsonArray serverResponse = FTPManager::createServerResponse(FTPManager::ResponseType::ActiveConnected , m_curDir);
     qDebug() << "Send test data!";
-    sendData(DataConverter::JsonArrayToByteArray(serverResponse));
+    this->sendData(DataConverter::JsonArrayToByteArray(serverResponse));
 }

@@ -23,20 +23,19 @@ signals:
     void dataReceivedSignal(const QByteArray &data);
 public slots:
     void startThread();
-    void restartListening(int port);
+    void restartListening(int port, const QString& dir);
     void stopListening();
-
+    void sendData(const QByteArray& data);
 private slots:
     void onStarted();
 
     void onNewConnection();
     void onReadyRead();
     void disconnected();
-
-    void sendData(const QByteArray& data);
 private:
     int m_port;
     QHostAddress m_address;
+    QString m_curDir;
 
     QThread m_thread;
     QTcpServer* m_server;

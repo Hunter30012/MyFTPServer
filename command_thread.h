@@ -23,12 +23,13 @@ signals:
     void startActiveDataThreadSignal();
     void restartActiveDataSignal(const QHostAddress& address, int port, const QString& curDir);
     void stopActiveDataSignal();
-    void connectedActiveSignal(const QString& dir);
+    void sendActiveDataSignal(const QByteArray& data);
 
     // passive mode
     void startPassiveDataThreadSignal();
-    void restartPassiveDataThreadSignal(int port);
+    void restartPassiveDataThreadSignal(int port, const QString dir);
     void stopPassiveDataSignal();
+    void sendPassiveDataSignal(const QByteArray& data);
 
     void sendDataSignal(const QByteArray& data);
     // Control Button

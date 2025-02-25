@@ -95,14 +95,6 @@ void CommandThread::onNewConnection()
     int clientPort = m_socket->peerPort();
     emit writeTextSignal("Connected from IP: " + m_socket->peerAddress().toString() +  ":" + QString::number(clientPort), Qt::darkBlue);
     emit enableStopSignal();
-
-    // test  - addr va port cua Client de ket noi toi
-    // QThread::sleep(2);
-    // QHostAddress addr_test("169.254.198.94");
-    // emit restartActiveDataSignal(addr_test, 5051);
-
-    // passive
-    // emit restartPassiveDataThreadSignal(5050);
 }
 
 void CommandThread::sendData(const QByteArray &data)
@@ -121,15 +113,6 @@ void CommandThread::onReadyRead()
         qDebug() << "Server receive data form client" << QThread::currentThread();
         QByteArray data = m_socket->readAll();
 
-
-        // QString msg = QString::fromUtf8(data);
-        // qDebug() << "Received: " << msg;
-
-        // Test Connected Active
-        // if (msg == "Active") {
-        //     emit writeTextSignal("Active mode command", Qt::darkBlue);
-        //     emit connectedActiveSignal(m_curDir);
-        // }
         if(FTPManager::checkIfDataIsJson(data)) {
             parseRequest(data);
         } else {
@@ -156,25 +139,53 @@ void CommandThread::parseRequest(const QByteArray &requestData)
     switch (requestType) {
     case 0: // ActiveConnect
         if (request.contains("port_data_thread" ) && request.contains("address_data_thread")) {
+            m_isActiveMode = true;
             int portDataThread = request["port_data_thread"].toString().toInt();
             QHostAddress addressDataThread(request["address_data_thread"].toString());
             emit restartActiveDataSignal(addressDataThread, portDataThread, m_curDir);
         }
         break;
     case 1: // PassiveConnect
-
+        m_isActiveMode = false;
         qDebug() << "PassiveConnect request received.";
+        emit restartPassiveDataThreadSignal(m_port + 1, m_curDir);
         break;
     case 2: // ChangeDir
         if (request.contains("requestPath")) {
             QString requestPath = request["requestPath"].toString();
             qDebug() << "ChangeDir - Path:" << requestPath;
+            m_curDir = requestPath;
+            QJsonArray serverResponse = FTPManager::createServerResponse(FTPManager::ResponseType::ChangedDir , requestPath);
+            if(m_isActiveMode) {
+                emit sendActiveDataSignal(DataConverter::JsonArrayToByteArray(serverResponse));
+            } else {
+                emit sendPassiveDataSignal(DataConverter::JsonArrayToByteArray(serverResponse));
+            }
         }
         break;
     case 3: // Delete
-        if (request.contains("fileToDelete")) {
-            QString fileToDelete = request["fileToDelete"].toString();
-            qDebug() << "Delete - File:" << fileToDelete;
+        if (request.contains("filesDelete")) {
+            QJsonArray filesArray = request["filesDelete"].toArray();
+            QStringList filesToDelete;
+
+            for (int i = 0; i < filesArray.size(); i++) {
+                if (filesArray[i].isString()) {
+                    filesToDelete.append(filesArray[i].toString());
+                }
+            }
+            bool isDeleteAll = FTPManager::deleteFiles(filesToDelete);
+            QJsonArray serverResponse;
+            if(isDeleteAll) {
+                serverResponse = FTPManager::createServerResponse(FTPManager::ResponseType::Deleted, m_curDir);
+            } else {
+                serverResponse = FTPManager::createServerResponse(FTPManager::ResponseType::UnDeleted, m_curDir);
+            }
+
+            if(m_isActiveMode) {
+                emit sendActiveDataSignal(DataConverter::JsonArrayToByteArray(serverResponse));
+            } else {
+                emit sendPassiveDataSignal(DataConverter::JsonArrayToByteArray(serverResponse));
+            }
         }
         break;
     case 4: // DownloadFile

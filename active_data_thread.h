@@ -28,9 +28,6 @@ public slots:
 
     void sendData(const QByteArray &data);
 
-    // Handle command
-    void onConnectedActive(const QString& dir);
-
 private slots:
     void onConnected();
     void onStarted();

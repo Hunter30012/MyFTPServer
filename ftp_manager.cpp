@@ -4,6 +4,9 @@ FTPManager::FTPManager() {}
 
 QFileInfoList FTPManager::getFilesFromDirectory(const QString &dir)
 {
+    if (dir.isEmpty()) {
+        return QDir::drives();
+    }
     QDir directory(dir);
     return directory.entryInfoList(QDir::NoDotAndDotDot | QDir::AllEntries);
 }
@@ -26,6 +29,7 @@ QPixmap FTPManager::getIconFromFileInfo(const QFileInfo &file)
 QJsonArray FTPManager::createServerResponse(ResponseType responseStatus, const QString &dir, quint64 bytesWritten)
 {
     QJsonArray serverResponse;
+    QFileIconProvider qfileIconProvider;
 
     serverResponse.append(QJsonObject {
         {"directory" , dir} ,
@@ -37,17 +41,24 @@ QJsonArray FTPManager::createServerResponse(ResponseType responseStatus, const Q
     for (int i = 0; i < filesInfo.count(); i++)
     {
         QPixmap icon = getIconFromFileInfo(filesInfo[i]);
+        QString fileType = qfileIconProvider.type(filesInfo[i]);
+        QString fileName = filesInfo[i].fileName();
+
+        if (fileName.isEmpty()) {
+            fileName = filesInfo[i].absoluteFilePath(); // "C:/" or "D:/"
+        }
+
         QJsonObject json {
-                {"fileName", filesInfo[i].fileName()},
+                {"fileName", fileName},
                 {"fileSize", QString::number(filesInfo[i].size())},
                 {"filePath", filesInfo[i].absoluteFilePath()},
                 {"isDir", filesInfo[i].isDir()},
-                {"lastModified", filesInfo[i].lastModified().toString()},
+                {"lastModified", filesInfo[i].lastModified().toString("M/d/yyyy h:mm AP")},
                 {"icon", encodePixmapForJson(icon)},
+                {"fileType", fileType},
             };
         serverResponse.append(json);
     }
-
     return serverResponse;
 }
 
@@ -77,68 +88,36 @@ bool FTPManager::checkIfDataIsJson(const QByteArray &data)
     return (jsonError.error == QJsonParseError::NoError) ? true : false;
 }
 
-void FTPManager::parseRequest(const QByteArray &requestData)
+bool FTPManager::deleteFiles(const QStringList &filesToDelete)
 {
-    QJsonDocument jsonDoc = QJsonDocument::fromJson(requestData);
-    QJsonObject request = jsonDoc.object();
+    bool ret = true;
+    for (const QString &path : filesToDelete) {
+        QFileInfo fileInfo(path);
 
-    if (!request.contains("request_type")) {
-        qDebug() << "Invalid request: Missing request_type!";
-        return;
+        if (fileInfo.exists()) {
+            if (fileInfo.isFile()) {
+                QFile file(path);
+                if (file.remove()) {
+                    qDebug() << "Deleted file:" << path;
+                } else {
+                    ret = false;
+                    qDebug() << "Failed to delete file:" << path;
+                }
+            } else if (fileInfo.isDir()) {
+                QDir dir(path);
+                if (dir.removeRecursively()) {
+                    qDebug() << "Deleted directory:" << path;
+                } else {
+                    ret  = false;
+                    qDebug() << "Failed to delete directory:" << path;
+                }
+            }
+        } else {
+            ret = false;
+            qDebug() << "Path not found:" << path;
+        }
     }
-
-    int requestType = request["request_type"].toInt();
-    qDebug() << "Received request type:" << requestType;
-
-    switch (requestType) {
-    case 0: // ActiveConnect
-        if (request.contains("port_data_thread")) {
-            int portDataThread = request["port_data_thread"].toInt();
-            qDebug() << "ActiveConnect - Port:" << portDataThread;
-        }
-        break;
-    case 1: // PassiveConnect
-        qDebug() << "PassiveConnect request received.";
-        break;
-    case 2: // ChangeDir
-        if (request.contains("requestPath")) {
-            QString requestPath = request["requestPath"].toString();
-            qDebug() << "ChangeDir - Path:" << requestPath;
-        }
-        break;
-    case 3: // Delete
-        if (request.contains("fileToDelete")) {
-            QString fileToDelete = request["fileToDelete"].toString();
-            qDebug() << "Delete - File:" << fileToDelete;
-        }
-        break;
-    case 4: // DownloadFile
-        if (request.contains("localPath") && request.contains("filePathServer") && request.contains("fileNameServer")) {
-            QString localPath = request["localPath"].toString();
-            QString filePathServer = request["filePathServer"].toString();
-            QString fileNameServer = request["fileNameServer"].toString();
-            qDebug() << "DownloadFile - LocalPath:" << localPath
-                     << ", ServerPath:" << filePathServer
-                     << ", FileName:" << fileNameServer;
-        }
-        break;
-    case 5: // UploadFile
-        if (request.contains("localDirPath") && request.contains("fileNameLocal") &&
-            request.contains("fileSizeLocal") && request.contains("filePathLocal")) {
-            QString localDirPath = request["localDirPath"].toString();
-            QString fileNameLocal = request["fileNameLocal"].toString();
-            QString fileSizeLocal = request["fileSizeLocal"].toString();
-            QString filePathLocal = request["filePathLocal"].toString();
-            qDebug() << "UploadFile - DirPath:" << localDirPath
-                     << ", FileName:" << fileNameLocal
-                     << ", Size:" << fileSizeLocal
-                     << ", FilePath:" << filePathLocal;
-        }
-        break;
-    default:
-        qWarning() << "Unknown request type!";
-        break;
-    }
+    return ret;
 }
 
 

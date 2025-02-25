@@ -49,23 +49,9 @@ void PassiveDataThread::onStarted()
     qDebug() << "After started: " << QThread::currentThread();
 }
 
-void PassiveDataThread::onNewConnection()
+void PassiveDataThread::restartListening(int port, const QString& dir)
 {
-    if(m_socket) {
-        m_socket->disconnect();
-        m_socket->close();
-        delete m_socket;
-        m_socket = nullptr;
-    }
-
-    m_socket = m_server->nextPendingConnection();
-    connect(m_socket, &QTcpSocket::disconnected, this, &PassiveDataThread::disconnected);
-    connect(m_socket, &QTcpSocket::readyRead, this, &PassiveDataThread::onReadyRead);
-    qInfo() << "Passive Data Socket connected!";
-}
-
-void PassiveDataThread::restartListening(int port)
-{
+    m_curDir = dir;
     m_port = port;
     if (!m_server) {
         m_server = new QTcpServer();
@@ -87,10 +73,29 @@ void PassiveDataThread::restartListening(int port)
     }
 }
 
+void PassiveDataThread::onNewConnection()
+{
+    if(m_socket) {
+        m_socket->disconnect();
+        m_socket->close();
+        delete m_socket;
+        m_socket = nullptr;
+    }
+
+    m_socket = m_server->nextPendingConnection();
+    connect(m_socket, &QTcpSocket::disconnected, this, &PassiveDataThread::disconnected);
+    connect(m_socket, &QTcpSocket::readyRead, this, &PassiveDataThread::onReadyRead);
+    qDebug() << "Passive Data Socket connected!";
+    QJsonArray serverResponse = FTPManager::createServerResponse(FTPManager::ResponseType::PassiveConnected , m_curDir);
+    this->sendData(DataConverter::JsonArrayToByteArray(serverResponse));
+}
+
 void PassiveDataThread::sendData(const QByteArray &data)
 {
     if (m_socket && m_socket->state() == QAbstractSocket::ConnectedState) {
+        emit writeTextSignal("Send data to Server", Qt::darkBlue);
         m_socket->write(data);
+        m_socket->flush();
     } else {
         qWarning() << "No active connection to write data.";
     }
