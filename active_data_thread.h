@@ -25,8 +25,8 @@ public slots:
     void startThread();
     void restartConnection(const QHostAddress &serverIp, int port, const QString& curDir);
     void stopConnection();
-
     void sendData(const QByteArray &data);
+    void downloadFiles(const QString& localPath, const QStringList& listFiles);
 
 private slots:
     void onConnected();

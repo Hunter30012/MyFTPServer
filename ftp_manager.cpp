@@ -26,7 +26,7 @@ QPixmap FTPManager::getIconFromFileInfo(const QFileInfo &file)
     return icon.pixmap(icon.actualSize(QSize(12, 12)));
 }
 
-QJsonArray FTPManager::createServerResponse(ResponseType responseStatus, const QString &dir, quint64 bytesWritten)
+QJsonArray FTPManager::createServerResponse(ResponseType responseStatus, const QString &dir)
 {
     QJsonArray serverResponse;
     QFileIconProvider qfileIconProvider;
@@ -34,7 +34,6 @@ QJsonArray FTPManager::createServerResponse(ResponseType responseStatus, const Q
     serverResponse.append(QJsonObject {
         {"directory" , dir} ,
         {"response_status", static_cast<int>(responseStatus)} ,
-        {"bytesWritten", QString::number(bytesWritten)} ,
     });
     QFileInfoList filesInfo = getFilesFromDirectory(dir);
 
@@ -59,6 +58,40 @@ QJsonArray FTPManager::createServerResponse(ResponseType responseStatus, const Q
             };
         serverResponse.append(json);
     }
+    return serverResponse;
+}
+
+QJsonArray FTPManager::createServerDownloadResponse(ResponseType responseStatus,
+                                                    const QString& localPath,
+                                                    const QString& filePathServer,
+                                                    const QStringList &fileList,
+                                                    bool isDir,
+                                                    quint64 writtenBytes,
+                                                    quint64 sizeFile,
+                                                    const QByteArray& data)
+{
+    QJsonObject response;
+    response["localPath"] = localPath;
+    response["response_status"] = static_cast<int>(responseStatus);
+    response["filePathServer"] = filePathServer;
+    response["isDir"] = isDir;
+
+    if (isDir) {
+        // folder
+        QJsonArray jsonFileList;
+        for (const QString &subFile : fileList) {
+            jsonFileList.append(subFile);
+        }
+        response["fileList"] = jsonFileList;
+    } else {
+        // File
+        response["writtenBytes"] = QString::number(writtenBytes);
+        response["sizeFile"] = QString::number(sizeFile);
+        response["dataPacket"] = QString::fromLatin1(data.toBase64());
+    }
+
+    QJsonArray serverResponse;
+    serverResponse.append(response);
     return serverResponse;
 }
 

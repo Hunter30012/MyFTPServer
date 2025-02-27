@@ -40,21 +40,24 @@ public:
         UploadingFile,
     };
 
-    static QJsonArray createServerResponse(ResponseType responseStatus, const QString& dir, quint64 bytesWritten = {});
+    static QFileInfoList getFilesFromDirectory(const QString& dir);
+    static QJsonArray createServerResponse(ResponseType responseStatus, const QString& dir);
+    static QJsonArray createServerDownloadResponse(ResponseType responseStatus,
+                                                   const QString& localPath,
+                                                   const QString& filePathServer,
+                                                   const QStringList &fileList,
+                                                   bool isDir,
+                                                   quint64 writtenBytes = 0,
+                                                   quint64 sizeFile = 0,
+                                                   const QByteArray& data = QByteArray());
     static bool checkFileExists(const QString& filePath, const QString& fileName);
     static QString changeFileName(const QString& fileName, const QString& filePath);
     static bool checkIfDataIsJson(const QByteArray& data);
-
-    static QJsonArray createUploadProgressResponse(ResponseType responseStatus, const QString& path, quint64 bytesWritten);
-    static bool checkIfBaseDir(const QString& directory, const QString& homeDirectory);
     static bool deleteFiles(const QStringList& filesToDelete);
-    static bool renameFile(const QString& filePath, const QString& oldFileName, QString& newFileName);
-    static bool createFolder(const QString& newFolderName);
 
 private:
     static QJsonValue encodePixmapForJson(const QPixmap& p);
     static QPixmap getIconFromFileInfo(const QFileInfo& file);
-    static QFileInfoList getFilesFromDirectory(const QString& dir);
 
     FTPManager();
 };

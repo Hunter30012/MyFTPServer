@@ -26,6 +26,7 @@ public slots:
     void restartListening(int port, const QString& dir);
     void stopListening();
     void sendData(const QByteArray& data);
+    void downloadFiles(const QString& localPath, const QStringList& listFiles);
 private slots:
     void onStarted();
 

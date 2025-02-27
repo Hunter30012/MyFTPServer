@@ -24,12 +24,14 @@ signals:
     void restartActiveDataSignal(const QHostAddress& address, int port, const QString& curDir);
     void stopActiveDataSignal();
     void sendActiveDataSignal(const QByteArray& data);
+    void downloadActiveFilesSignal(const QString& localPath, const QStringList& listFiles);
 
     // passive mode
     void startPassiveDataThreadSignal();
     void restartPassiveDataThreadSignal(int port, const QString dir);
     void stopPassiveDataSignal();
     void sendPassiveDataSignal(const QByteArray& data);
+    void downloadPassiveFilesSignal(const QString& localPath, const QStringList& listFiles);
 
     void sendDataSignal(const QByteArray& data);
     // Control Button

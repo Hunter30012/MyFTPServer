@@ -88,8 +88,8 @@ void CommandThread::onNewConnection()
     }
 
     m_socket = m_server->nextPendingConnection();
-    connect(m_socket, &QTcpSocket::disconnected, this, &CommandThread::disconnected);
-    connect(m_socket, &QTcpSocket::readyRead, this, &CommandThread::onReadyRead);
+    connect(m_socket, &QTcpSocket::disconnected, this, &CommandThread::disconnected, Qt::QueuedConnection);
+    connect(m_socket, &QTcpSocket::readyRead, this, &CommandThread::onReadyRead, Qt::QueuedConnection);
     qInfo() << "New client connected!";
 
     int clientPort = m_socket->peerPort();
@@ -189,13 +189,22 @@ void CommandThread::parseRequest(const QByteArray &requestData)
         }
         break;
     case 4: // DownloadFile
-        if (request.contains("localPath") && request.contains("filePathServer") && request.contains("fileNameServer")) {
+        if (request.contains("localPath") && request.contains("filePathServer")) {
             QString localPath = request["localPath"].toString();
-            QString filePathServer = request["filePathServer"].toString();
-            QString fileNameServer = request["fileNameServer"].toString();
-            qDebug() << "DownloadFile - LocalPath:" << localPath
-                     << ", ServerPath:" << filePathServer
-                     << ", FileName:" << fileNameServer;
+            QJsonArray filesArray = request["filePathServer"].toArray();
+            QStringList filesToDownload;
+
+            for (int i = 0; i < filesArray.size(); i++) {
+                if (filesArray[i].isString()) {
+                    filesToDownload.append(filesArray[i].toString());
+                    emit writeTextSignal("Download file " + filesArray[i].toString());
+                }
+            }
+            if(m_isActiveMode) {
+                emit downloadActiveFilesSignal(localPath, filesToDownload);
+            } else {
+                emit downloadPassiveFilesSignal(localPath, filesToDownload);
+            }
         }
         break;
     case 5: // UploadFile
