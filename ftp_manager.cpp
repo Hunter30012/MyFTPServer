@@ -26,19 +26,37 @@ QPixmap FTPManager::getIconFromFileInfo(const QFileInfo &file)
     return icon.pixmap(icon.actualSize(QSize(12, 12)));
 }
 
-QJsonArray FTPManager::createServerResponse(ResponseType responseStatus, const QString &dir)
+/**
+ * dir: path in Server to display in Client
+ */
+QJsonArray FTPManager::createServerResponse(ResponseType responseStatus,
+                                            const QString &dir,
+                                            bool isDir,
+                                            bool isSuccess,
+                                            const QString& localPath,
+                                            const QString& saveServerPath)
 {
     QJsonArray serverResponse;
     QFileIconProvider qfileIconProvider;
 
-    serverResponse.append(QJsonObject {
-        {"directory" , dir} ,
-        {"response_status", static_cast<int>(responseStatus)} ,
-    });
+    if(responseStatus == FTPManager::ResponseType::UploadedFile || responseStatus == FTPManager::ResponseType::UploadingFile) {
+        serverResponse.append(QJsonObject {
+            {"serverPath", dir},
+            {"response_status", static_cast<int>(responseStatus)},
+            {"localPath", localPath},
+            {"isDir", isDir},
+            {"saveServerPath", saveServerPath},
+            {"isSuccess", isSuccess},
+        });
+    } else {
+        serverResponse.append(QJsonObject {
+            {"directory" , dir},
+            {"response_status", static_cast<int>(responseStatus)},
+        });
+    }
     QFileInfoList filesInfo = getFilesFromDirectory(dir);
 
-    for (int i = 0; i < filesInfo.count(); i++)
-    {
+    for (int i = 0; i < filesInfo.count(); i++) {
         QPixmap icon = getIconFromFileInfo(filesInfo[i]);
         QString fileType = qfileIconProvider.type(filesInfo[i]);
         QString fileName = filesInfo[i].fileName();
@@ -95,6 +113,21 @@ QJsonArray FTPManager::createServerDownloadResponse(ResponseType responseStatus,
     return serverResponse;
 }
 
+// QJsonObject FTPManager::createServerUploadResponse(ResponseType responseStatus,
+//                                                   bool isDir,
+//                                                   const QString &localPath,
+//                                                   const QString &serverPath)
+// {
+//     QJsonObject response;
+//     response["response_status"] = static_cast<int>(responseStatus);
+//     response["isDir"] = isDir;
+//     if(isDir) {
+//         response["localPath"] = localPath;
+//         response["serverPath"] = serverPath;
+//     }
+//     return response;
+// }
+
 bool FTPManager::checkFileExists(const QString &filePath, const QString &fileName)
 {
     return QDir(filePath).exists(fileName);
@@ -103,12 +136,18 @@ bool FTPManager::checkFileExists(const QString &filePath, const QString &fileNam
 QString FTPManager::changeFileName(const QString &fileName, const QString &filePath)
 {
     int fileNumToAppend = 0;
-    QString newFileName;
-    do
-    {
-        newFileName = fileName;
+    QString newFileName = fileName;
+    QFileInfo fileInfo(fileName);
+    QString baseName = fileInfo.completeBaseName(); // fileName without suffix
+    QString suffix = fileInfo.suffix(); // suffix
+
+    do {
         ++fileNumToAppend;
-        newFileName = newFileName.insert(newFileName.indexOf("."), "_" + QString::number(fileNumToAppend));
+        if (!suffix.isEmpty()) {
+            newFileName = baseName + "_" + QString::number(fileNumToAppend) + "." + suffix;
+        } else {
+            newFileName = baseName + "_" + QString::number(fileNumToAppend);
+        }
     } while (checkFileExists(filePath, newFileName));
 
     return newFileName;

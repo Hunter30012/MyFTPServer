@@ -24,7 +24,8 @@ public:
         ChangeDir,
         Delete,
         DownloadFile,
-        UploadFile,
+        UploadedFile,
+        UploadingFile,
     };
 
     enum class ResponseType
@@ -41,7 +42,12 @@ public:
     };
 
     static QFileInfoList getFilesFromDirectory(const QString& dir);
-    static QJsonArray createServerResponse(ResponseType responseStatus, const QString& dir);
+    static QJsonArray createServerResponse(ResponseType responseStatus,
+                                           const QString& dir,
+                                           bool isDir = false,
+                                           bool isSuccess = true,
+                                           const QString& localPath = "",
+                                           const QString& saveServerPath = "");
     static QJsonArray createServerDownloadResponse(ResponseType responseStatus,
                                                    const QString& localPath,
                                                    const QString& filePathServer,
@@ -50,6 +56,7 @@ public:
                                                    quint64 writtenBytes = 0,
                                                    quint64 sizeFile = 0,
                                                    const QByteArray& data = QByteArray());
+
     static bool checkFileExists(const QString& filePath, const QString& fileName);
     static QString changeFileName(const QString& fileName, const QString& filePath);
     static bool checkIfDataIsJson(const QByteArray& data);

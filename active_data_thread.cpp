@@ -23,8 +23,8 @@ ActiveDataThread::~ActiveDataThread()
 
 void ActiveDataThread::startThread()
 {
-    qDebug() << "Start Active Data Thread";
     if (!m_thread.isRunning()) {
+        qDebug() << "Start Active Data Thread";
         this->moveToThread(&m_thread);
         connect(&m_thread, &QThread::started, this, &ActiveDataThread::onStarted);
         m_thread.start();
@@ -76,7 +76,6 @@ void ActiveDataThread::sendData(const QByteArray &data)
 {
     // qDebug() << "Send data in ActiveDataThread";
     if (m_socket && m_socket->state() == QAbstractSocket::ConnectedState) {
-        // emit writeTextSignal("Send data to Client", Qt::darkBlue);
         m_socket->write(data);
         m_socket->flush();
     } else {
@@ -87,7 +86,7 @@ void ActiveDataThread::sendData(const QByteArray &data)
 void ActiveDataThread::downloadFiles(const QString& localPath, const QStringList &listFiles)
 {
     QFile qFile;
-    const qint64 packetSize = 10000;
+    const qint64 packetSize = 20000;
     quint64 writtenBytes = 0;
     quint64 size = 0;
     QByteArray fileData;
@@ -163,7 +162,7 @@ void ActiveDataThread::downloadFiles(const QString& localPath, const QStringList
                 size,
                 fileData);
             this->sendData(DataConverter::JsonArrayToByteArray(serverResponse));
-            QThread::msleep(50);
+            QThread::msleep(10);
         }
         // download big file: Done
         QJsonArray serverResponse = FTPManager::createServerDownloadResponse(
@@ -182,10 +181,8 @@ void ActiveDataThread::downloadFiles(const QString& localPath, const QStringList
 
 void ActiveDataThread::onReadyRead()
 {
-    // TBD
     if (m_socket) {
         QByteArray data = m_socket->readAll();
-        emit writeTextSignal("Recieved Data from Client", Qt::darkBlue);
         emit dataReceivedSignal(data);
     }
 }

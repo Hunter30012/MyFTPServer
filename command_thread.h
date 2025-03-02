@@ -41,15 +41,12 @@ signals:
 public slots:
     void startThread(int port, const QString& dir); // connect to Button
     void stopListening();          // connect to Button
-
+    void sendData(const QByteArray& data);
 private slots:
     void onStarted();
-
     void onNewConnection();
     void onReadyRead();
     void disconnected();
-
-    void sendData(const QByteArray& data);
     void parseRequest(const QByteArray& requestData);
 
 private:

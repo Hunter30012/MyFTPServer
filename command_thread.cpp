@@ -101,6 +101,7 @@ void CommandThread::sendData(const QByteArray &data)
 {
     if (m_socket && m_socket->state() == QAbstractSocket::ConnectedState) {
         m_socket->write(data);
+        m_socket->flush();
     } else {
         qWarning() << "No active connection to write data.";
     }
@@ -123,6 +124,11 @@ void CommandThread::onReadyRead()
 
 void CommandThread::parseRequest(const QByteArray &requestData)
 {
+    bool isJson = FTPManager::checkIfDataIsJson(requestData);
+    if (!isJson) {
+        emit writeTextSignal("Request from Client - Invalid Json format!", Qt::red);
+        return;
+    }
     QJsonDocument jsonDoc = QJsonDocument::fromJson(requestData);
     QJsonObject request = jsonDoc.object();
 
@@ -132,12 +138,10 @@ void CommandThread::parseRequest(const QByteArray &requestData)
     }
 
     qDebug() << "Received JSON:" << QJsonDocument(request).toJson(QJsonDocument::Compact);
-
-    int requestType = request["request_type"].toInt();
-    qDebug() << "Received request type:" << requestType;
+    FTPManager::RequestType requestType = static_cast<FTPManager::RequestType>(request["request_type"].toInt());
 
     switch (requestType) {
-    case 0: // ActiveConnect
+    case FTPManager::RequestType::ActiveConnect: // ActiveConnect
         if (request.contains("port_data_thread" ) && request.contains("address_data_thread")) {
             m_isActiveMode = true;
             int portDataThread = request["port_data_thread"].toString().toInt();
@@ -145,12 +149,12 @@ void CommandThread::parseRequest(const QByteArray &requestData)
             emit restartActiveDataSignal(addressDataThread, portDataThread, m_curDir);
         }
         break;
-    case 1: // PassiveConnect
+    case FTPManager::RequestType::PassiveConnect: // PassiveConnect
         m_isActiveMode = false;
         qDebug() << "PassiveConnect request received.";
         emit restartPassiveDataThreadSignal(m_port + 1, m_curDir);
         break;
-    case 2: // ChangeDir
+    case FTPManager::RequestType::ChangeDir: // ChangeDir
         if (request.contains("requestPath")) {
             QString requestPath = request["requestPath"].toString();
             qDebug() << "ChangeDir - Path:" << requestPath;
@@ -163,7 +167,7 @@ void CommandThread::parseRequest(const QByteArray &requestData)
             }
         }
         break;
-    case 3: // Delete
+    case FTPManager::RequestType::Delete: // Delete
         if (request.contains("filesDelete")) {
             QJsonArray filesArray = request["filesDelete"].toArray();
             QStringList filesToDelete;
@@ -188,7 +192,7 @@ void CommandThread::parseRequest(const QByteArray &requestData)
             }
         }
         break;
-    case 4: // DownloadFile
+    case FTPManager::RequestType::DownloadFile: // DownloadFile
         if (request.contains("localPath") && request.contains("filePathServer")) {
             QString localPath = request["localPath"].toString();
             QJsonArray filesArray = request["filePathServer"].toArray();
@@ -207,31 +211,19 @@ void CommandThread::parseRequest(const QByteArray &requestData)
             }
         }
         break;
-    case 5: // UploadFile
-        if (request.contains("localDirPath") && request.contains("fileNameLocal") &&
-            request.contains("fileSizeLocal") && request.contains("filePathLocal")) {
-            QString localDirPath = request["localDirPath"].toString();
-            QString fileNameLocal = request["fileNameLocal"].toString();
-            QString fileSizeLocal = request["fileSizeLocal"].toString();
-            QString filePathLocal = request["filePathLocal"].toString();
-            qDebug() << "UploadFile - DirPath:" << localDirPath
-                     << ", FileName:" << fileNameLocal
-                     << ", Size:" << fileSizeLocal
-                     << ", FilePath:" << filePathLocal;
-        }
-        break;
     default:
-        qWarning() << "Unknown request type!";
+        emit writeTextSignal("Unknown request type!", Qt::red);
         break;
     }
 }
 
 void CommandThread::stopListening()
 {
-    // active
-    // emit stopActiveDataSignal();
-    // passive
-    emit stopPassiveDataSignal();
+    if(m_isActiveMode) {
+        emit stopActiveDataSignal();
+    } else {
+        emit stopPassiveDataSignal();
+    }
     qDebug() << "Stop Listening in Command Thread";
     if (m_server) {
         m_server->close();
@@ -251,9 +243,11 @@ void CommandThread::stopListening()
 
 void CommandThread::disconnected()
 {
-    // active
-    // emit stopActiveDataSignal();
-    //passive
+    if(m_isActiveMode) {
+        emit stopActiveDataSignal();
+    } else {
+        emit stopPassiveDataSignal();
+    }
     emit stopPassiveDataSignal();
     qInfo() << "CommandThread Disconnected";
     emit writeTextSignal("Disconected!", Qt::red);

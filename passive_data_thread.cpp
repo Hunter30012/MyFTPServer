@@ -35,8 +35,8 @@ PassiveDataThread::~PassiveDataThread()
 
 void PassiveDataThread::startThread()
 {
-    qDebug() << "Start Passive Data Thread";
     if (!m_thread.isRunning()) {
+        qDebug() << "Start Passive Data Thread";
         this->moveToThread(&m_thread);
         connect(&m_thread, &QThread::started, this, &PassiveDataThread::onStarted);
         m_thread.start();
@@ -104,10 +104,9 @@ void PassiveDataThread::sendData(const QByteArray &data)
 void PassiveDataThread::downloadFiles(const QString& localPath, const QStringList &listFiles)
 {
     QFile qFile;
-    const qint64 packetSize = 10000;
+    const qint64 packetSize = 20000;
     quint64 writtenBytes = 0;
     quint64 size = 0;
-    QByteArray fileData;
 
     for (const QString &file : listFiles) {
         qDebug() << "local path: " << localPath;
@@ -148,7 +147,7 @@ void PassiveDataThread::downloadFiles(const QString& localPath, const QStringLis
         // Send file immediately
         if(size < packetSize) {
             writtenBytes = size;
-            fileData = qFile.read(size);
+            QByteArray fileData = qFile.read(size);
             QJsonArray serverResponse = FTPManager::createServerDownloadResponse(
                 FTPManager::ResponseType::DownloadedFile,
                 localPath,
@@ -166,7 +165,7 @@ void PassiveDataThread::downloadFiles(const QString& localPath, const QStringLis
         // Split file into chunks and send
         while (writtenBytes < size) {
             qFile.seek(writtenBytes);
-            fileData = qFile.read(packetSize);
+            QByteArray fileData = qFile.read(packetSize);
             quint64 currentChunkSize = fileData.size();
             writtenBytes += currentChunkSize;
 
@@ -180,7 +179,7 @@ void PassiveDataThread::downloadFiles(const QString& localPath, const QStringLis
                 size,
                 fileData);
             this->sendData(DataConverter::JsonArrayToByteArray(serverResponse));
-            QThread::msleep(50);
+            QThread::msleep(10);
         }
         // download big file: Done
         QJsonArray serverResponse = FTPManager::createServerDownloadResponse(
